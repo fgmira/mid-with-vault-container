@@ -8,18 +8,22 @@ services:
       # VARIALBE FOR TESTING MODE, IF SET TO TRUE
       # MID SERVER AND VAULT AGENT WILL NOT BE STARTED
       # BUT THE CONTAINER UP
-      CHECK_MODE: "TRUE"
+      CHECK_MODE: "FALSE"
       # VALT AGENT ENV VAR
-      VAULT_AGENT_EXIT_AFTER_AUTH: "true"
-      VAULT_ROLE: ""
-      TARGET_FILE_NAME: ""
-      VAULT_ADDR: ""
+      # Mandatory Env Var
+      VAULT_AGENT_EXIT_AFTER_AUTH: "false"
+      VAULT_AGENT_ROLE_ID_FILE: "/vault-agent/role/role_id.txt"
+      VAULT_AGENT_SECRET_ID_FILE: "/vault-agent/role/secret_id.txt"
+      VAULT_AGENT_REMOVE_AFTER_AUTH: "false"
+      VAULT_AGENT_SERVER_ADDR: "http://vault_server:8200"
       VAULT_AGENT_TEMPLATE_FILE: "/vault-agent/secret.j2"
+      VAULT_AGENT_TARGET_FILE: "/vault-agent/secret.txt"
+
       # MID SERVER ENV VAR
       # Mandatory Env Var
       MID_INSTANCE_URL: "https://dev121818.service-now.com/"
-      MID_INSTANCE_USERNAME: ""
-      MID_INSTANCE_PASSWORD: ""
+      MID_INSTANCE_USERNAME: "mid_server"
+      MID_INSTANCE_PASSWORD: "#Da-jOd8M:A8w>y,o)3oE+iP*Pvk=7}:08"
       MID_SERVER_NAME: "mid-vault"
       # Optional Env Var
       MID_PROXY_HOST: ""
@@ -30,8 +34,12 @@ services:
       MID_MUTUAL_AUTH_PEM_FILE: ""
       MID_SSL_BOOTSTRAP_CERT_REVOCATION_CHECK: ""
       MID_SSL_USE_INSTANCE_SECURITY_POLICY: ""
+    volumes:
+      - ./volumes/vault/role:/vault-agent/role
+    depends_on:
+      - vault_server
 
-  db:
+  db1:
     image: "hashicorpdemoapp/product-api-db:v4280cf7"
     ports:
       - "15432:5432"
@@ -59,17 +67,39 @@ services:
       POSTGRES_PASSWORD: 'password3'
 
   vault_server:
-    image: hashicorp/vault:1.14.2
+    image: vault-server:0.1.0
     container_name: vault_server
     restart: always
     ports:
       - "8200:8200"
     environment:
-      - VAULT_DEV_ROOT_TOKEN_ID= 'root'
-      - VAULT_DEV_LISTEN_ADDRESS= '0.0.0.0:8200'
+      # VARIALBE FOR TESTING MODE, IF SET TO TRUE
+      # VAULT SERVER WILL NOT BE STARTED
+      # BUT THE CONTAINER UP
+      CHECK_MODE: "FALSE"
+      # VARIABLE TO SET A USER AND LISTENER ADDRESS
+      # FOR VAULT SERVER
+      VAULT_DEV_ROOT_TOKEN_ID: "root"
+      VAULT_DEV_LISTEN_ADDRESS: "0.0.0.0:8200"
+      # VARIABLES TO CREATE A KV SECRET IN VALUT SERVER
+      SECRET_USER_NAME: "test_user"
+      SECRET_USER_PWD: "kxX1xZ-pKGWTU;fD"
     cap_add:
       - IPC_LOCK
     volumes:
       - ./volumes/vault/data:/vault/data
       - ./volumes/vault/config:/vault/config
       - ./volumes/vault/logs:/vault/logs
+      - ./volumes/vault/role:/vault/role
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "curl",
+          "-f",
+          "http://localhost:8200/v1/sys/health"
+        ]
+      interval: 1m30s
+      timeout: 30s
+      retries: 5
+      start_period: 30s

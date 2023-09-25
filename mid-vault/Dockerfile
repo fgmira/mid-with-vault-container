@@ -30,7 +30,7 @@ RUN if [ "$MID_SIGNATURE_VERIFICATION" = "TRUE" ] || [ "$MID_SIGNATURE_VERIFICAT
 
 RUN unzip -d /opt/snc_mid_server/ /tmp/mid.zip && rm -f /tmp/mid.zip
 
-FROM alpine:latest
+FROM almalinux:latest
 
 # ##########################
 # INSTALLATION OF COMMON UTILITIES
@@ -38,25 +38,24 @@ FROM alpine:latest
 
 # Install common utilities and clean up
 
-RUN apk add --no-cache \
-    alpine-keys \
-    bash \
-    build-base \
-    ca-certificates \
-    curl \
-    gcompat \
-    iputils \
-    libc6-compat \
-    libgcc \
-    net-tools \
-    procps \
-    shadow \
-    unzip \
-    xmlstarlet \
-    wget \
-    && apk add --update alpine-sdk \
-    && rm -rf /tmp/*
+RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm
 
+RUN dnf update -y && \
+    dnf install -y  --allowerasing \
+    bind-utils \
+    curl \
+    iputils \
+    procps \
+    net-tools \
+    xmlstarlet \
+    unzip \
+    && \
+    dnf clean packages -y && \
+    rm -rf /tmp/*
+
+# VARIALBE FOR TESTING MODE, IF SET TO TRUE
+# MID SERVER AND VAULT AGENT WILL NOT BE STARTED
+# BUT THE CONTAINER UP
 ENV CHECK_MODE "false"
 
 # ##########################
@@ -65,12 +64,14 @@ ENV CHECK_MODE "false"
 
 # RUNTIME ENV VAR DEFINITION
 
-ENV VAULT_VERSION=1.14.2
+ENV VAULT_VERSION "1.14.2"
 ENV VAULT_AGENT_EXIT_AFTER_AUTH ""
-ENV VAULT_ROLE ""
-ENV TARGET_FILE_NAME ""
-ENV VAULT_ADDR ""
-ENV VAULT_AGENT_TEMPLATE_FILE "/vault-agent/secret.j2"
+ENV VAULT_AGENT_ROLE_ID_FILE ""
+ENV VAULT_AGENT_SECRET_ID_FILE ""
+ENV VAULT_AGENT_REMOVE_AFTER_AUTH ""
+ENV VAULT_AGENT_SERVER_ADDR ""
+ENV VAULT_AGENT_TEMPLATE_FILE ""
+ENV VAULT_AGENT_TARGET_FILE ""
 
 # INSTALLATION OF VAULT AGENT
 
